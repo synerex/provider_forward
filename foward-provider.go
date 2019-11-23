@@ -14,7 +14,7 @@ import (
 
 var (
 	srcSrv             = flag.String("srcsrv", "127.0.0.1:9990", "Source Synerex Node ID Server")
-	dstSrv             = flag.String("destsrv", "127.0.0.1:9990", "Destination Synerex Node ID Server")
+	dstSrv             = flag.String("dstsrv", "127.0.0.1:9990", "Destination Synerex Node ID Server")
 	channel            = flag.Int("channel", 3, "Forwarding channel type")
 	mu                 sync.Mutex
 	sxSrcServerAddress string
