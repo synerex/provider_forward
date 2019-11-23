@@ -97,6 +97,7 @@ func main() {
 	wg.Add(1)
 
 	go subscribeSupply(sxSrclient)
+    go monitorStatus()
 
 	wg.Wait()
 	sxutil.CallDeferFunctions() // cleanup!
