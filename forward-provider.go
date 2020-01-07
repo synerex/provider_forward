@@ -35,6 +35,7 @@ func supplyCallback(clt *sxutil.SXServiceClient, sm *pb.Supply) {
 	smo := sxutil.SupplyOpts{
 		Name:  sm.SupplyName,
 		Cdata: &cont,
+        JSON:  sm.ArgJson,
 	}
 	//			fmt.Printf("Res: %v",smo)
 	_, nerr := sxDstClient.NotifySupply(&smo)
@@ -55,7 +56,7 @@ func subscribeSupply(client *sxutil.SXServiceClient) {
 // just for stat
 func monitorStatus() {
 	for {
-		sxutil.SetNodeStatus(int32(msgCount), fmt.Sprintf("dt:%d", msgCount))
+		sxutil.SetNodeStatus(int32(msgCount), fmt.Sprintf("sent:%d", msgCount))
 		time.Sleep(time.Second * 3)
 	}
 }
