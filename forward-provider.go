@@ -41,6 +41,14 @@ func supplyCallback(clt *sxutil.SXServiceClient, sm *pb.Supply) {
 	_, nerr := sxDstClient.NotifySupply(&smo)
 	if nerr != nil {
 		log.Printf("Error on sent %v", nerr)
+
+		time.Sleep(5 * time.Second)
+		// we need to reconecct dst server
+		log.Printf("Reconnect server [%s]",sxDstServerAddress)		
+		dstClient := sxutil.GrpcConnectServer(sxDstServerAddress)
+		argDstJson := fmt.Sprintf("{ForwardSrc[%d]}", *channel)
+		sxDstClient = sxutil.NewSXServiceClient(dstClient, uint32(*channel), argDstJson)
+		sxDstClient.NotifySupply(&smo)
 	}
 
 }
@@ -48,9 +56,18 @@ func supplyCallback(clt *sxutil.SXServiceClient, sm *pb.Supply) {
 func subscribeSupply(client *sxutil.SXServiceClient) {
 	// goroutine!
 	ctx := context.Background() //
-	client.SubscribeSupply(ctx, supplyCallback)
+	for {
+		client.SubscribeSupply(ctx, supplyCallback)
 	// comes here if channel closed
-	log.Printf("Server closed... on Forward provider")
+		log.Printf("Server closed... on Forward provider")
+
+		time.Sleep(5 * time.Second)
+		newClt :=  sxutil.GrpcConnectServer(sxSrcServerAddress)
+		if newClt != nil {
+			log.Printf("Reconnect server [%s]",sxSrcServerAddress)
+			client.Client = newClt
+		}
+	}
 }
 
 // just for stat
@@ -98,7 +115,7 @@ func main() {
 	wg.Add(1)
 
 	go subscribeSupply(sxSrclient)
-    go monitorStatus()
+	go monitorStatus()
 
 	wg.Wait()
 	sxutil.CallDeferFunctions() // cleanup!
