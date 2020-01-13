@@ -35,7 +35,7 @@ func supplyCallback(clt *sxutil.SXServiceClient, sm *pb.Supply) {
 	smo := sxutil.SupplyOpts{
 		Name:  sm.SupplyName,
 		Cdata: &cont,
-        JSON:  sm.ArgJson,
+		JSON:  sm.ArgJson,
 	}
 	//			fmt.Printf("Res: %v",smo)
 	_, nerr := sxDstClient.NotifySupply(&smo)
@@ -44,7 +44,7 @@ func supplyCallback(clt *sxutil.SXServiceClient, sm *pb.Supply) {
 
 		time.Sleep(5 * time.Second)
 		// we need to reconecct dst server
-		log.Printf("Reconnect server [%s]",sxDstServerAddress)		
+		log.Printf("Reconnect server [%s]", sxDstServerAddress)
 		dstClient := sxutil.GrpcConnectServer(sxDstServerAddress)
 		argDstJson := fmt.Sprintf("{ForwardSrc[%d]}", *channel)
 		sxDstClient = sxutil.NewSXServiceClient(dstClient, uint32(*channel), argDstJson)
@@ -58,13 +58,13 @@ func subscribeSupply(client *sxutil.SXServiceClient) {
 	ctx := context.Background() //
 	for {
 		client.SubscribeSupply(ctx, supplyCallback)
-	// comes here if channel closed
+		// comes here if channel closed
 		log.Printf("Server closed... on Forward provider")
 
 		time.Sleep(5 * time.Second)
-		newClt :=  sxutil.GrpcConnectServer(sxSrcServerAddress)
+		newClt := sxutil.GrpcConnectServer(sxSrcServerAddress)
 		if newClt != nil {
-			log.Printf("Reconnect server [%s]",sxSrcServerAddress)
+			log.Printf("Reconnect server [%s]", sxSrcServerAddress)
 			client.Client = newClt
 		}
 	}
@@ -73,7 +73,14 @@ func subscribeSupply(client *sxutil.SXServiceClient) {
 // just for stat
 func monitorStatus() {
 	for {
-		sxutil.SetNodeStatus(int32(msgCount), fmt.Sprintf("sent:%d", msgCount))
+		sxutil.SetNodeStatus(int32(msgCount), fmt.Sprintf("recv:%d", msgCount))
+		time.Sleep(time.Second * 3)
+	}
+}
+
+func monitorStatusDst(dstNI *sxutil.NodeServInfo) {
+	for {
+		dstNI.SetNodeStatus(int32(msgCount), fmt.Sprintf("sent:%d", msgCount))
 		time.Sleep(time.Second * 3)
 	}
 }
@@ -87,16 +94,19 @@ func main() {
 	go sxutil.HandleSigInt()
 	sxutil.RegisterDeferFunction(sxutil.UnRegisterNode)
 
+	dstNI := sxutil.NewNodeServInfo() // for dst node server connection
+	sxutil.RegisterDeferFunction(dstNI.UnRegisterNode)
+
 	channelTypes := []uint32{uint32(*channel)}
 	// obtain synerex server address from nodeserv
-	srcSSrv, err := sxutil.RegisterNode(*srcSrv, fmt.Sprintf("FowardSink[%d]", *channel), channelTypes, nil)
+	srcSSrv, err := sxutil.RegisterNode(*srcSrv, fmt.Sprintf("FowardSrc[%d]", *channel), channelTypes, nil)
 	if err != nil {
 		log.Fatal("Can't register to source node...")
 	}
 	log.Printf("Connecting Source Server [%s]\n", srcSSrv)
 	sxSrcServerAddress = srcSSrv
 
-	dstSSrv, derr := sxutil.RegisterNode(*dstSrv, fmt.Sprintf("FowardSource[%d]", *channel), channelTypes, nil)
+	dstSSrv, derr := dstNI.RegisterNodeWithCmd(*dstSrv, fmt.Sprintf("FowardDst[%d]", *channel), channelTypes, nil, nil)
 	if derr != nil {
 		log.Fatal("Can't register to destination node...")
 	}
@@ -116,6 +126,7 @@ func main() {
 
 	go subscribeSupply(sxSrclient)
 	go monitorStatus()
+	go monitorStatusDst(dstNI)
 
 	wg.Wait()
 	sxutil.CallDeferFunctions() // cleanup!
