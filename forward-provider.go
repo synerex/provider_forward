@@ -90,6 +90,7 @@ func main() {
 	if *srcSrv == *dstSrv {
 		log.Fatal("Input servers should not be same address")
 	}
+	log.Printf("foward-provider(%s) built %s sha1 %s", sxutil.GitVer, sxutil.BuildTime, sxutil.Sha1Ver)
 
 	go sxutil.HandleSigInt()
 	sxutil.RegisterDeferFunction(sxutil.UnRegisterNode)
