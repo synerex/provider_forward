@@ -86,6 +86,8 @@ func monitorStatusDst(dstNI *sxutil.NodeServInfo) {
 }
 
 func main() {
+	log.Printf("FowardProvider(%s) built %s sha1 %s", sxutil.GitVer, sxutil.BuildTime, sxutil.Sha1Ver)
+
 	flag.Parse()
 	if *srcSrv == *dstSrv {
 		log.Fatal("Input servers should not be same address")
