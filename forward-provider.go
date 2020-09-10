@@ -14,7 +14,9 @@ import (
 
 var (
 	srcSrv             = flag.String("srcsrv", "127.0.0.1:9990", "Source Synerex Node ID Server")
+	srcSxAddr          = flag.String("srcsxsrv", "", "Source Synerex Server Addr")
 	dstSrv             = flag.String("dstsrv", "127.0.0.1:9990", "Destination Synerex Node ID Server")
+	dstSxAddr          = flag.String("dstsxsrv", "", "Destination Synerex Server Addr")
 	channel            = flag.Int("channel", 3, "Forwarding channel type")
 	mu                 sync.Mutex
 	sxSrcServerAddress string
@@ -106,6 +108,10 @@ func main() {
 	if err != nil {
 		log.Fatal("Can't register to source node...")
 	}
+	if *srcSxAddr != "" {
+		srcSSrv = *srcSxAddr
+	}
+
 	log.Printf("Connecting Source Server [%s]\n", srcSSrv)
 	sxSrcServerAddress = srcSSrv
 
@@ -113,6 +119,10 @@ func main() {
 	if derr != nil {
 		log.Fatal("Can't register to destination node...")
 	}
+	if *dstSxAddr != "" {
+		dstSSrv = *dstSxAddr
+	}
+
 	log.Printf("Connecting Destination Server [%s]\n", dstSSrv)
 	sxDstServerAddress = dstSSrv
 
