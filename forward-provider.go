@@ -46,7 +46,7 @@ func supplyCallback(clt *sxutil.SXServiceClient, sm *pb.Supply) {
 
 		time.Sleep(5 * time.Second)
 		// we need to reconecct dst server
-		log.Printf("Reconnect server [%s]", sxDstServerAddress)
+		log.Printf("Reconnect Dst server [%s]", sxDstServerAddress)
 		dstClient := sxutil.GrpcConnectServer(sxDstServerAddress)
 		argDstJson := fmt.Sprintf("{ForwardSrc[%d]}", *channel)
 		sxDstClient = sxutil.NewSXServiceClient(dstClient, uint32(*channel), argDstJson)
@@ -57,17 +57,20 @@ func supplyCallback(clt *sxutil.SXServiceClient, sm *pb.Supply) {
 
 func subscribeSupply(client *sxutil.SXServiceClient) {
 	// goroutine!
-	ctx := context.Background() //
 	for {
-		client.SubscribeSupply(ctx, supplyCallback)
+		ctx := context.Background() //
+		log.Printf("SubscirbeSupply with %v", client)
+		serr := client.SubscribeSupply(ctx, supplyCallback)
 		// comes here if channel closed
-		log.Printf("Server closed... on Forward provider")
+		log.Print("Server closed... on Src Forward provider", serr)
 
 		time.Sleep(5 * time.Second)
 		newClt := sxutil.GrpcConnectServer(sxSrcServerAddress)
 		if newClt != nil {
-			log.Printf("Reconnect server [%s]", sxSrcServerAddress)
+			log.Printf("Reconnect Src server [%s]", sxSrcServerAddress)
 			client.SXClient = newClt
+		} else {
+			log.Printf("Connection Error!! on Src Server")
 		}
 	}
 }
@@ -129,15 +132,15 @@ func main() {
 	wg := sync.WaitGroup{} // for syncing other goroutines
 	srcClient := sxutil.GrpcConnectServer(sxSrcServerAddress)
 	argJson := fmt.Sprintf("{ForwardSink[%d]}", *channel)
-	sxSrclient := sxutil.NewSXServiceClient(srcClient, uint32(*channel), argJson)
+	sxSrcClient := sxutil.NewSXServiceClient(srcClient, uint32(*channel), argJson)
 
 	dstClient := sxutil.GrpcConnectServer(sxDstServerAddress)
 	argDstJson := fmt.Sprintf("{ForwardSrc[%d]}", *channel)
-	sxDstClient = sxutil.NewSXServiceClient(dstClient, uint32(*channel), argDstJson)
+	sxDstClient = dstNI.NewSXServiceClient(dstClient, uint32(*channel), argDstJson)
 
 	wg.Add(1)
 
-	go subscribeSupply(sxSrclient)
+	go subscribeSupply(sxSrcClient)
 	go monitorStatus()
 	go monitorStatusDst(dstNI)
 
