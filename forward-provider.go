@@ -1,5 +1,9 @@
 package main
 
+/* Forwarding Provider
+   (Currently only supports NotifySupply)
+*/
+
 import (
 	"context"
 	"flag"
@@ -56,15 +60,16 @@ func supplyCallback(clt *sxutil.SXServiceClient, sm *pb.Supply) {
 }
 
 func subscribeSupply(client *sxutil.SXServiceClient) {
-	// goroutine!
+	// goroutine for Src Server.
 	for {
 		ctx := context.Background() //
 		log.Printf("SubscirbeSupply with %v", client)
 		serr := client.SubscribeSupply(ctx, supplyCallback)
 		// comes here if channel closed
-		log.Print("Server closed... on Src Forward provider", serr)
+		log.Print("Server closed... on Src Forward provider from:", sxSrcServerAddress, ",error:", serr)
 
 		time.Sleep(5 * time.Second)
+		//TODO: should check nodeserver.
 		newClt := sxutil.GrpcConnectServer(sxSrcServerAddress)
 		if newClt != nil {
 			log.Printf("Reconnect Src server [%s]", sxSrcServerAddress)
@@ -97,7 +102,6 @@ func main() {
 	if *srcSrv == *dstSrv {
 		log.Fatal("Input servers should not be same address")
 	}
-	log.Printf("foward-provider(%s) built %s sha1 %s", sxutil.GitVer, sxutil.BuildTime, sxutil.Sha1Ver)
 
 	go sxutil.HandleSigInt()
 	sxutil.RegisterDeferFunction(sxutil.UnRegisterNode)
