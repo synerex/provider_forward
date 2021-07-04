@@ -5,7 +5,6 @@ package main
 */
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -29,6 +28,8 @@ var (
 	msgCount           int64
 )
 
+const SEND_RETRY_COUNT = 5
+
 func init() {
 	msgCount = 0
 }
@@ -37,31 +38,49 @@ func init() {
 func supplyCallback(clt *sxutil.SXServiceClient, sm *pb.Supply) {
 
 	msgCount++
-	cont := pb.Content{Entity: sm.Cdata.Entity}
-	smo := sxutil.SupplyOpts{
-		Name:  sm.SupplyName,
-		Cdata: &cont,
-		JSON:  sm.ArgJson,
+	var smo sxutil.SupplyOpts
+	if sm.Cdata != nil {
+		cont := pb.Content{Entity: sm.Cdata.Entity}
+		smo = sxutil.SupplyOpts{
+			Name:  sm.SupplyName,
+			Cdata: &cont,
+			JSON:  sm.ArgJson,
+		}
+		//			fmt.Printf("Res: %v",smo)
+	}else{
+		smo = sxutil.SupplyOpts{
+			Name:  sm.SupplyName,
+			Cdata: nil,
+			JSON:  sm.ArgJson,
+		}
 	}
-	//			fmt.Printf("Res: %v",smo)
 	_, nerr := sxDstClient.NotifySupply(&smo)
 	if nerr != nil {
-		log.Printf("Error on sent %v", nerr)
-
-		time.Sleep(5 * time.Second)
-		// we need to reconecct dst server
-		log.Printf("Reconnect Dst server [%s]", sxDstServerAddress)
-		dstClient := sxutil.GrpcConnectServer(sxDstServerAddress)
-		argDstJson := fmt.Sprintf("{ForwardSrc[%d]}", *channel)
-		sxDstClient = sxutil.NewSXServiceClient(dstClient, uint32(*channel), argDstJson)
-		sxDstClient.NotifySupply(&smo)
+		ecount := 1
+		for ecount < SEND_RETRY_COUNT && nerr != nil {
+			log.Printf("Error on sent %v", nerr)
+			
+			time.Sleep(5 * time.Second * time.Duration(ecount))
+			// we need to reconecct dst server
+			log.Printf("Reconnect Dst server [%s]", sxDstServerAddress)
+		/* sxutil may reconnect !? */
+		//		dstClient := sxutil.GrpcConnectServer(sxDstServerAddress)
+		//		argDstJson := fmt.Sprintf("{ForwardSrc[%d]}", *channel)
+		//		sxDstClient = dstNI.NewSXServiceClient(dstClient, uint32(*channel), argDstJson)
+			_, nerr = sxDstClient.NotifySupply(&smo)
+			ecount++
+		}
+		if ecount == SEND_RETRY_COUNT {
+			log.Printf("Error count exceeded! reason: %v", nerr)			
+		}
 	}
 
 }
-
+/*
 func subscribeSupply(client *sxutil.SXServiceClient) {
 	// goroutine for Src Server.
 	for {
+		
 		ctx := context.Background() //
 		log.Printf("SubscirbeSupply with %v", client)
 		serr := client.SubscribeSupply(ctx, supplyCallback)
@@ -78,7 +97,8 @@ func subscribeSupply(client *sxutil.SXServiceClient) {
 			log.Printf("Connection Error!! on Src Server")
 		}
 	}
-}
+ }
+*/
 
 // just for stat
 func monitorStatus() {
@@ -135,16 +155,22 @@ func main() {
 
 	wg := sync.WaitGroup{} // for syncing other goroutines
 	srcClient := sxutil.GrpcConnectServer(sxSrcServerAddress)
+	if srcClient == nil {
+		log.Fatal("Can't connect source Synerex server")
+	}
 	argJson := fmt.Sprintf("{ForwardSink[%d]}", *channel)
 	sxSrcClient := sxutil.NewSXServiceClient(srcClient, uint32(*channel), argJson)
 
 	dstClient := sxutil.GrpcConnectServer(sxDstServerAddress)
+	if dstClient == nil {
+		log.Fatal("Can't connect destination Synerex server")
+	}
 	argDstJson := fmt.Sprintf("{ForwardSrc[%d]}", *channel)
 	sxDstClient = dstNI.NewSXServiceClient(dstClient, uint32(*channel), argDstJson)
 
 	wg.Add(1)
 
-	go subscribeSupply(sxSrcClient)
+	sxutil.SimpleSubscribeSupply(sxSrcClient,supplyCallback)
 	go monitorStatus()
 	go monitorStatusDst(dstNI)
 

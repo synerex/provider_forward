@@ -1,20 +1,15 @@
 module forward-provider
 
-go 1.14
+go 1.16
 
 require (
+	9fans.net/go v0.0.4 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
-	github.com/golang/protobuf v1.4.3 // indirect
+	github.com/keegancsmith/rpc v1.3.0 // indirect
+	github.com/rogpeppe/godef v1.1.2 // indirect
 	github.com/shirou/gopsutil v3.21.1+incompatible // indirect
-	github.com/synerex/synerex_api v0.4.2
-	github.com/synerex/synerex_nodeapi v0.5.4 // indirect
-	github.com/synerex/synerex_proto v0.1.10 // indirect
-	github.com/synerex/synerex_sxutil v0.6.3
-	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
-	golang.org/x/sys v0.0.0-20210219172841-57ea560cfca1 // indirect
-	golang.org/x/text v0.3.5 // indirect
-	google.golang.org/genproto v0.0.0-20210219173056-d891e3cb3b5b // indirect
-	google.golang.org/grpc v1.35.0 // indirect
+	github.com/stamblerre/gocode v1.0.0 // indirect
+	github.com/synerex/synerex_api v0.4.3
+	github.com/synerex/synerex_sxutil v0.7.0
 )
 
-replace github.com/synerex/synerex_sxutil => ../../sxutil
