@@ -47,7 +47,7 @@ func supplyCallback(clt *sxutil.SXServiceClient, sm *pb.Supply) {
 			JSON:  sm.ArgJson,
 		}
 		//			fmt.Printf("Res: %v",smo)
-	}else{
+	} else {
 		smo = sxutil.SupplyOpts{
 			Name:  sm.SupplyName,
 			Cdata: nil,
@@ -59,28 +59,29 @@ func supplyCallback(clt *sxutil.SXServiceClient, sm *pb.Supply) {
 		ecount := 1
 		for ecount < SEND_RETRY_COUNT && nerr != nil {
 			log.Printf("Error on sent %v", nerr)
-			
+
 			time.Sleep(5 * time.Second * time.Duration(ecount))
 			// we need to reconecct dst server
 			log.Printf("Reconnect Dst server [%s]", sxDstServerAddress)
-		/* sxutil may reconnect !? */
-		//		dstClient := sxutil.GrpcConnectServer(sxDstServerAddress)
-		//		argDstJson := fmt.Sprintf("{ForwardSrc[%d]}", *channel)
-		//		sxDstClient = dstNI.NewSXServiceClient(dstClient, uint32(*channel), argDstJson)
+			/* sxutil may reconnect !? */
+			//		dstClient := sxutil.GrpcConnectServer(sxDstServerAddress)
+			//		argDstJson := fmt.Sprintf("{ForwardSrc[%d]}", *channel)
+			//		sxDstClient = dstNI.NewSXServiceClient(dstClient, uint32(*channel), argDstJson)
 			_, nerr = sxDstClient.NotifySupply(&smo)
 			ecount++
 		}
 		if ecount == SEND_RETRY_COUNT {
-			log.Printf("Error count exceeded! reason: %v", nerr)			
+			log.Printf("Error count exceeded! reason: %v", nerr)
 		}
 	}
 
 }
+
 /*
 func subscribeSupply(client *sxutil.SXServiceClient) {
 	// goroutine for Src Server.
 	for {
-		
+
 		ctx := context.Background() //
 		log.Printf("SubscirbeSupply with %v", client)
 		serr := client.SubscribeSupply(ctx, supplyCallback)
@@ -161,6 +162,8 @@ func main() {
 	argJson := fmt.Sprintf("{ForwardSink[%d]}", *channel)
 	sxSrcClient := sxutil.NewSXServiceClient(srcClient, uint32(*channel), argJson)
 
+	log.Printf("Connected to Source Server! [%s]\n", srcSSrv)
+
 	dstClient := sxutil.GrpcConnectServer(sxDstServerAddress)
 	if dstClient == nil {
 		log.Fatal("Can't connect destination Synerex server")
@@ -168,9 +171,11 @@ func main() {
 	argDstJson := fmt.Sprintf("{ForwardSrc[%d]}", *channel)
 	sxDstClient = dstNI.NewSXServiceClient(dstClient, uint32(*channel), argDstJson)
 
+	log.Printf("Connected to Destination Server! [%s]\n", dstSSrv)
+
 	wg.Add(1)
 
-	sxutil.SimpleSubscribeSupply(sxSrcClient,supplyCallback)
+	sxutil.SimpleSubscribeSupply(sxSrcClient, supplyCallback)
 	go monitorStatus()
 	go monitorStatusDst(dstNI)
 
